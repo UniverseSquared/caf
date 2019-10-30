@@ -31,6 +31,14 @@ void render_editor_state(void) {
     fflush(stdout);
 }
 
+void set_editor_cursor_position(size_t x, size_t y) {
+    editor.cursor_x = x;
+    editor.cursor_y = y;
+
+    printf("\x1b[%zu;%zuH", editor.cursor_y, editor.cursor_x);
+    fflush(stdout);
+}
+
 void move_editor_cursor(int x, int y) {
     size_t new_x = editor.cursor_x + x;
     size_t new_y = editor.cursor_y + y;
@@ -52,6 +60,19 @@ void move_editor_cursor(int x, int y) {
 void editor_handle_keypress(char c) {
     if(c == CTRL('q')) {
         editor.running = 0;
+    } else if(c == CTRL('a')) {
+        set_editor_cursor_position(0, editor.cursor_y);
+    } else if(c == CTRL('e')) {
+        size_t cursor_x_limit = strlen(editor.buffer.lines[editor.cursor_y]) + 1;
+        set_editor_cursor_position(cursor_x_limit, editor.cursor_y);
+    } else if(c == CTRL('n')) {
+        move_editor_cursor(0, 1);
+    } else if(c == CTRL('p')) {
+        move_editor_cursor(0, -1);
+    } else if(c == CTRL('f')) {
+        move_editor_cursor(1, 0);
+    } else if(c == CTRL('b')) {
+        move_editor_cursor(-1, 0);
     } else if(c == 0x1b) {
         char buffer[2];
         if(read(STDIN_FILENO, buffer, 2) == -1) {

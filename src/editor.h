@@ -22,6 +22,7 @@ typedef struct editor_state {
 extern editor_state_t editor;
 
 void render_editor_state(void);
+void set_editor_cursor_position(size_t x, size_t y);
 void move_editor_cursor(int x, int y);
 void editor_handle_keypress(char c);
 void editor_load_from_file(FILE *file);
