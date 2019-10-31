@@ -18,6 +18,7 @@ enum editor_special_key {
 typedef struct editor_buffer {
     char **lines;
     size_t line_count;
+    FILE *file;
 } editor_buffer_t;
 
 typedef struct editor_state {
@@ -34,6 +35,7 @@ void render_editor_state(void);
 void editor_insert_char_at_cursor(char c);
 void editor_insert_newline_at_cursor(void);
 void editor_backspace_at_cursor(void);
+void editor_save_buffer(void);
 void set_editor_cursor_position(size_t x, size_t y);
 void move_editor_cursor(int x, int y);
 int editor_read_key(void);
@@ -41,5 +43,6 @@ void editor_handle_keypress();
 void editor_load_from_file(FILE *file);
 void editor_window_size_changed(int signum);
 void init_editor(void);
+void cleanup_editor(void);
 
 #endif

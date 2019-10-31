@@ -114,6 +114,21 @@ void editor_backspace_at_cursor(void) {
     render_editor_state();
 }
 
+void editor_save_buffer(void) {
+    if(editor.buffer.file == NULL)
+        return;
+
+    ftruncate(fileno(editor.buffer.file), 0);
+    fseek(editor.buffer.file, 0, SEEK_SET);
+
+    for(size_t i = 0; i < editor.buffer.line_count; i++) {
+        char *line = editor.buffer.lines[i];
+
+        fwrite(line, 1, strlen(line), editor.buffer.file);
+        fwrite("\n", 1, 1, editor.buffer.file);
+    }
+}
+
 void set_editor_cursor_position(size_t x, size_t y) {
     editor.cursor_x = x;
     editor.cursor_y = y;
@@ -245,6 +260,7 @@ void editor_load_from_file(FILE *file) {
     }
 
     editor.buffer.line_count = i;
+    editor.buffer.file = file;
 }
 
 void editor_window_size_changed(int signum) {
@@ -274,4 +290,11 @@ void init_editor(void) {
     editor.cursor_y = 0;
 
     editor.running = 1;
+}
+
+void cleanup_editor(void) {
+    if(editor.buffer.file != NULL) {
+        editor_save_buffer();
+        fclose(editor.buffer.file);
+    }
 }

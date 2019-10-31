@@ -14,7 +14,7 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    FILE *file = fopen(argv[1], "r");
+    FILE *file = fopen(argv[1], "r+");
 
     if(!file) {
         printf("Couldn't open file: %s\n", strerror(errno));
@@ -22,7 +22,6 @@ int main(int argc, char *argv[]) {
     }
 
     editor_load_from_file(file);
-    fclose(file);
 
     init_editor();
 
@@ -31,6 +30,8 @@ int main(int argc, char *argv[]) {
     while(editor.running) {
         editor_handle_keypress();
     }
+
+    cleanup_editor();
 
     return 0;
 }
