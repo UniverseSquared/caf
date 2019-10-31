@@ -35,6 +35,7 @@ void move_editor_cursor(int x, int y);
 int editor_read_key(void);
 void editor_handle_keypress();
 void editor_load_from_file(FILE *file);
+void editor_window_size_changed(int signum);
 void init_editor(void);
 
 #endif

@@ -1,6 +1,7 @@
 #include "editor.h"
 #include "terminal.h"
 #include <ctype.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -170,6 +171,16 @@ void editor_load_from_file(FILE *file) {
     editor.buffer.line_count = i;
 }
 
+void editor_window_size_changed(int signum) {
+    struct winsize size;
+    ioctl(0, TIOCGWINSZ, &size);
+
+    editor.term_width = size.ws_col;
+    editor.term_height = size.ws_row;
+
+    render_editor_state();
+}
+
 void init_editor(void) {
     configure_terminal();
 
@@ -179,6 +190,9 @@ void init_editor(void) {
 
     editor.term_width = size.ws_col;
     editor.term_height = size.ws_row;
+
+    /* Register a callback for when the window size changes. */
+    signal(SIGWINCH, editor_window_size_changed);
 
     editor.cursor_x = 0;
     editor.cursor_y = 0;
