@@ -1,5 +1,6 @@
 #include "editor.h"
 #include "terminal.h"
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -29,6 +30,22 @@ void render_editor_state(void) {
 
     printf("\x1b[%zu;%zuH", editor.cursor_y, editor.cursor_x);
     fflush(stdout);
+}
+
+void editor_insert_char_at_cursor(char c) {
+    size_t x = editor.cursor_x;
+    size_t y = editor.cursor_y;
+    size_t line_length = strlen(editor.buffer.lines[y]);
+    editor.buffer.lines[y] = realloc(editor.buffer.lines[y], line_length + 2);
+    memset(editor.buffer.lines[y] + line_length, 0, 2);
+
+    memmove(editor.buffer.lines[y] + x,
+            editor.buffer.lines[y] + x - 1,
+            line_length - x + 1);
+
+    editor.buffer.lines[y][x - 1] = c;
+    editor.cursor_x++;
+    render_editor_state();
 }
 
 void set_editor_cursor_position(size_t x, size_t y) {
@@ -90,6 +107,8 @@ void editor_handle_keypress(char c) {
             else if(buffer[1] == 'D')
                 move_editor_cursor(-1, 0);
         }
+    } else if(!iscntrl(c)) {
+        editor_insert_char_at_cursor(c);
     }
 }
 
