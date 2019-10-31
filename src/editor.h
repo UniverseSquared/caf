@@ -7,6 +7,7 @@
 #define CAF_VERSION "0.0.1"
 
 enum editor_special_key {
+    KEY_BACKSPACE = 127,
     KEY_ARROW_UP = 1000,
     KEY_ARROW_DOWN,
     KEY_ARROW_LEFT,
@@ -30,6 +31,7 @@ extern editor_state_t editor;
 
 void render_editor_state(void);
 void editor_insert_char_at_cursor(char c);
+void editor_backspace_at_cursor(void);
 void set_editor_cursor_position(size_t x, size_t y);
 void move_editor_cursor(int x, int y);
 int editor_read_key(void);

@@ -49,6 +49,42 @@ void editor_insert_char_at_cursor(char c) {
     render_editor_state();
 }
 
+void editor_backspace_at_cursor(void) {
+    size_t x = editor.cursor_x;
+    size_t y = editor.cursor_y;
+    size_t line_length = strlen(editor.buffer.lines[y]);
+
+    if(x == 0 && y == 0)
+        return;
+
+    if(x > 0) {
+        memmove(editor.buffer.lines[y] + x - 1,
+                editor.buffer.lines[y] + x,
+                line_length - x + 1);
+
+        editor.cursor_x--;
+    } else {
+        size_t previous_line_length = strlen(editor.buffer.lines[y - 1]);
+        size_t total_line_size = previous_line_length + line_length + 1;
+        editor.buffer.lines[y - 1] = realloc(editor.buffer.lines[y - 1],
+                                             total_line_size);
+
+        memmove(editor.buffer.lines[y - 1] + previous_line_length,
+                editor.buffer.lines[y],
+                line_length);
+
+        for(size_t i = y + 1; i < editor.buffer.line_count; i++) {
+            editor.buffer.lines[i - 1] = editor.buffer.lines[i];
+        }
+
+        editor.buffer.line_count--;
+        editor.cursor_x = total_line_size - 1;
+        editor.cursor_y--;
+    }
+
+    render_editor_state();
+}
+
 void set_editor_cursor_position(size_t x, size_t y) {
     editor.cursor_x = x;
     editor.cursor_y = y;
@@ -147,6 +183,10 @@ void editor_handle_keypress() {
 
     case CTRL('a'):
         set_editor_cursor_position(0, editor.cursor_y);
+        break;
+
+    case KEY_BACKSPACE:
+        editor_backspace_at_cursor();
         break;
 
     default:
