@@ -34,7 +34,7 @@ void render_editor_state(void) {
 
 void editor_insert_char_at_cursor(char c) {
     size_t x = editor.cursor_x;
-    size_t y = editor.cursor_y;
+    size_t y = editor.cursor_y - 1;
     size_t line_length = strlen(editor.buffer.lines[y]);
     editor.buffer.lines[y] = realloc(editor.buffer.lines[y], line_length + 2);
     memset(editor.buffer.lines[y] + line_length, 0, 2);
@@ -66,7 +66,7 @@ void move_editor_cursor(int x, int y) {
     if(new_y > 0 && new_y < editor.term_height)
         editor.cursor_y += y;
 
-    size_t cursor_x_limit = strlen(editor.buffer.lines[new_y]) + 1;
+    size_t cursor_x_limit = strlen(editor.buffer.lines[new_y - 1]) + 1;
 
     editor.cursor_x = MIN(editor.cursor_x, cursor_x_limit);
 
@@ -80,7 +80,7 @@ void editor_handle_keypress(char c) {
     } else if(c == CTRL('a')) {
         set_editor_cursor_position(0, editor.cursor_y);
     } else if(c == CTRL('e')) {
-        size_t cursor_x_limit = strlen(editor.buffer.lines[editor.cursor_y]) + 1;
+        size_t cursor_x_limit = strlen(editor.buffer.lines[editor.cursor_y - 1]) + 1;
         set_editor_cursor_position(cursor_x_limit, editor.cursor_y);
     } else if(c == CTRL('n')) {
         move_editor_cursor(0, 1);
