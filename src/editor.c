@@ -27,7 +27,10 @@ void render_editor_state(void) {
             printf("\r\n");
     }
 
-    printf("caf version %s", CAF_VERSION);
+    if(editor.message != NULL)
+        printf("%s", editor.message);
+    else
+        printf("caf version %s", CAF_VERSION);
 
     printf("\x1b[%zu;%zuH", editor.cursor_y + 1, editor.cursor_x + 1);
     fflush(stdout);
@@ -127,6 +130,8 @@ void editor_save_buffer(void) {
         fwrite(line, 1, strlen(line), editor.buffer.file);
         fwrite("\n", 1, 1, editor.buffer.file);
     }
+
+    editor_show_message("saved file");
 }
 
 void set_editor_cursor_position(size_t x, size_t y) {
@@ -195,6 +200,11 @@ void editor_handle_keypress() {
     if(key == 0)
         return;
 
+    if(editor.message != NULL) {
+        editor.message = NULL;
+        render_editor_state();
+    }
+
     switch(key) {
     case CTRL('q'):
         editor.running = 0;
@@ -229,6 +239,10 @@ void editor_handle_keypress() {
         set_editor_cursor_position(0, editor.cursor_y);
         break;
 
+    case CTRL('s'):
+        editor_save_buffer();
+        break;
+
     case KEY_BACKSPACE:
         editor_backspace_at_cursor();
         break;
@@ -261,6 +275,11 @@ void editor_load_from_file(FILE *file) {
 
     editor.buffer.line_count = i;
     editor.buffer.file = file;
+}
+
+void editor_show_message(char *message) {
+    editor.message = message;
+    render_editor_state();
 }
 
 void editor_window_size_changed(int signum) {

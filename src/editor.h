@@ -26,6 +26,7 @@ typedef struct editor_state {
     size_t cursor_x, cursor_y;
     int term_width, term_height;
     int running;
+    char *message;
     editor_buffer_t buffer;
 } editor_state_t;
 
@@ -41,6 +42,7 @@ void move_editor_cursor(int x, int y);
 int editor_read_key(void);
 void editor_handle_keypress();
 void editor_load_from_file(FILE *file);
+void editor_show_message(char *message);
 void editor_window_size_changed(int signum);
 void init_editor(void);
 void cleanup_editor(void);
