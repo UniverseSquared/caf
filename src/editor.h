@@ -6,6 +6,13 @@
 
 #define CAF_VERSION "0.0.1"
 
+enum editor_special_key {
+    KEY_ARROW_UP = 1000,
+    KEY_ARROW_DOWN,
+    KEY_ARROW_LEFT,
+    KEY_ARROW_RIGHT
+};
+
 typedef struct editor_buffer {
     char **lines;
     size_t line_count;
@@ -25,7 +32,8 @@ void render_editor_state(void);
 void editor_insert_char_at_cursor(char c);
 void set_editor_cursor_position(size_t x, size_t y);
 void move_editor_cursor(int x, int y);
-void editor_handle_keypress(char c);
+int editor_read_key(void);
+void editor_handle_keypress();
 void editor_load_from_file(FILE *file);
 void init_editor(void);
 

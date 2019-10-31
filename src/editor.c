@@ -28,13 +28,13 @@ void render_editor_state(void) {
 
     printf("caf version %s", CAF_VERSION);
 
-    printf("\x1b[%zu;%zuH", editor.cursor_y, editor.cursor_x);
+    printf("\x1b[%zu;%zuH", editor.cursor_y + 1, editor.cursor_x + 1);
     fflush(stdout);
 }
 
 void editor_insert_char_at_cursor(char c) {
     size_t x = editor.cursor_x;
-    size_t y = editor.cursor_y - 1;
+    size_t y = editor.cursor_y;
     size_t line_length = strlen(editor.buffer.lines[y]);
     editor.buffer.lines[y] = realloc(editor.buffer.lines[y], line_length + 2);
     memset(editor.buffer.lines[y] + line_length, 0, 2);
@@ -43,7 +43,7 @@ void editor_insert_char_at_cursor(char c) {
             editor.buffer.lines[y] + x - 1,
             line_length - x + 1);
 
-    editor.buffer.lines[y][x - 1] = c;
+    editor.buffer.lines[y][x] = c;
     editor.cursor_x++;
     render_editor_state();
 }
@@ -52,7 +52,7 @@ void set_editor_cursor_position(size_t x, size_t y) {
     editor.cursor_x = x;
     editor.cursor_y = y;
 
-    printf("\x1b[%zu;%zuH", editor.cursor_y, editor.cursor_x);
+    printf("\x1b[%zu;%zuH", editor.cursor_y + 1, editor.cursor_x + 1);
     fflush(stdout);
 }
 
@@ -60,37 +60,28 @@ void move_editor_cursor(int x, int y) {
     size_t new_x = editor.cursor_x + x;
     size_t new_y = editor.cursor_y + y;
 
-    if(new_x > 0 && new_x < editor.term_width + 1)
+    if(new_x >= 0 && new_x < editor.term_width + 1)
         editor.cursor_x += x;
 
-    if(new_y > 0 && new_y < editor.term_height)
+    if(new_y >= 0 && new_y < editor.term_height)
         editor.cursor_y += y;
 
-    size_t cursor_x_limit = strlen(editor.buffer.lines[new_y - 1]) + 1;
+    size_t cursor_x_limit = strlen(editor.buffer.lines[new_y]);
 
     editor.cursor_x = MIN(editor.cursor_x, cursor_x_limit);
 
-    printf("\x1b[%zu;%zuH", editor.cursor_y, editor.cursor_x);
+    printf("\x1b[%zu;%zuH", editor.cursor_y + 1, editor.cursor_x + 1);
     fflush(stdout);
 }
 
-void editor_handle_keypress(char c) {
-    if(c == CTRL('q')) {
-        editor.running = 0;
-    } else if(c == CTRL('a')) {
-        set_editor_cursor_position(0, editor.cursor_y);
-    } else if(c == CTRL('e')) {
-        size_t cursor_x_limit = strlen(editor.buffer.lines[editor.cursor_y - 1]) + 1;
-        set_editor_cursor_position(cursor_x_limit, editor.cursor_y);
-    } else if(c == CTRL('n')) {
-        move_editor_cursor(0, 1);
-    } else if(c == CTRL('p')) {
-        move_editor_cursor(0, -1);
-    } else if(c == CTRL('f')) {
-        move_editor_cursor(1, 0);
-    } else if(c == CTRL('b')) {
-        move_editor_cursor(-1, 0);
-    } else if(c == 0x1b) {
+int editor_read_key(void) {
+    char c = 0;
+    if(read(STDIN_FILENO, &c, 1) == -1) {
+        perror("read");
+        exit(1);
+    }
+
+    if(c == 0x1b) {
         char buffer[2];
         if(read(STDIN_FILENO, buffer, 2) == -1) {
             perror("read");
@@ -99,16 +90,63 @@ void editor_handle_keypress(char c) {
 
         if(buffer[0] == '[') {
             if(buffer[1] == 'A')
-                move_editor_cursor(0, -1);
+                return KEY_ARROW_UP;
             else if(buffer[1] == 'B')
-                move_editor_cursor(0, 1);
+                return KEY_ARROW_DOWN;
             else if(buffer[1] == 'C')
-                move_editor_cursor(1, 0);
+                return KEY_ARROW_RIGHT;
             else if(buffer[1] == 'D')
-                move_editor_cursor(-1, 0);
+                return KEY_ARROW_LEFT;
+        } else {
+            return 0;
         }
-    } else if(!iscntrl(c)) {
-        editor_insert_char_at_cursor(c);
+    }
+
+    return c;
+}
+
+void editor_handle_keypress() {
+    int key = editor_read_key();
+
+    if(key == 0)
+        return;
+
+    switch(key) {
+    case CTRL('q'):
+        editor.running = 0;
+        break;
+
+    case CTRL('p'):
+    case KEY_ARROW_UP:
+        move_editor_cursor(0, -1);
+        break;
+
+    case CTRL('n'):
+    case KEY_ARROW_DOWN:
+        move_editor_cursor(0, 1);
+        break;
+
+    case CTRL('b'):
+    case KEY_ARROW_LEFT:
+        move_editor_cursor(-1, 0);
+        break;
+
+    case CTRL('f'):
+    case KEY_ARROW_RIGHT:
+        move_editor_cursor(1, 0);
+        break;
+
+    case CTRL('e'): {
+        size_t cursor_x_limit = strlen(editor.buffer.lines[editor.cursor_y]);
+        set_editor_cursor_position(cursor_x_limit, editor.cursor_y);
+    } break;
+
+    case CTRL('a'):
+        set_editor_cursor_position(0, editor.cursor_y);
+        break;
+
+    default:
+        editor_insert_char_at_cursor(key);
     }
 }
 
@@ -142,8 +180,8 @@ void init_editor(void) {
     editor.term_width = size.ws_col;
     editor.term_height = size.ws_row;
 
-    editor.cursor_x = 1;
-    editor.cursor_y = 1;
+    editor.cursor_x = 0;
+    editor.cursor_y = 0;
 
     editor.running = 1;
 }

@@ -17,17 +17,8 @@ int main(int argc, char *argv[]) {
 
     render_editor_state();
 
-    char c;
     while(editor.running) {
-        c = 0;
-
-        if(read(STDIN_FILENO, &c, 1) == -1) {
-            perror("read");
-            exit(1);
-        }
-
-        if(c != 0)
-            editor_handle_keypress(c);
+        editor_handle_keypress();
     }
 
     return 0;
