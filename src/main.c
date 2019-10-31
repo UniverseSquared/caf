@@ -9,11 +9,22 @@
 #include <unistd.h>
 
 int main(int argc, char *argv[]) {
-    init_editor();
+    if(argc < 2) {
+        printf("Usage: %s <file>\n", argv[0]);
+        return 1;
+    }
 
-    FILE *file = fopen("src/terminal.c", "r");
+    FILE *file = fopen(argv[1], "r");
+
+    if(!file) {
+        printf("Couldn't open file: %s\n", strerror(errno));
+        return 1;
+    }
+
     editor_load_from_file(file);
     fclose(file);
+
+    init_editor();
 
     render_editor_state();
 

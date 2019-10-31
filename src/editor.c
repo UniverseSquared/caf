@@ -16,7 +16,7 @@ void render_editor_state(void) {
     printf("\x1b[2J\x1b[0;0H");
 
     size_t line_display_count = MIN(editor.buffer.line_count,
-                                    editor.term_height);
+                                    editor.term_height - 1);
 
     for(size_t i = 0; i < line_display_count; i++)
         printf("%s\r\n", editor.buffer.lines[i]);
@@ -46,6 +46,35 @@ void editor_insert_char_at_cursor(char c) {
 
     editor.buffer.lines[y][x] = c;
     editor.cursor_x++;
+    render_editor_state();
+}
+
+void editor_insert_newline_at_cursor(void) {
+    size_t x = editor.cursor_x;
+    size_t y = editor.cursor_y;
+    editor.buffer.lines = realloc(editor.buffer.lines,
+                                  sizeof(char*) * editor.buffer.line_count + 1);
+
+    for(size_t i = editor.buffer.line_count; i > y; i--) {
+        editor.buffer.lines[i] = editor.buffer.lines[i - 1];
+    }
+
+    size_t remaining_line_length = strlen(editor.buffer.lines[y]) - x;
+
+    editor.buffer.lines[y + 1] = malloc(remaining_line_length + 1);
+    editor.buffer.lines[y + 1][remaining_line_length] = 0;
+
+    memmove(editor.buffer.lines[y + 1],
+            editor.buffer.lines[y] + x,
+            remaining_line_length);
+
+    memset(editor.buffer.lines[y] + x, 0, remaining_line_length);
+
+    editor.cursor_x = 0;
+    editor.cursor_y++;
+
+    editor.buffer.line_count++;
+
     render_editor_state();
 }
 
@@ -101,7 +130,7 @@ void move_editor_cursor(int x, int y) {
         editor.cursor_x += x;
 
     if(new_y >= 0
-       && new_y < editor.term_height
+       && new_y < editor.term_height - 1
        && new_y <= editor.buffer.line_count - 1) {
         editor.cursor_y += y;
 
@@ -187,6 +216,10 @@ void editor_handle_keypress() {
 
     case KEY_BACKSPACE:
         editor_backspace_at_cursor();
+        break;
+
+    case KEY_RETURN:
+        editor_insert_newline_at_cursor();
         break;
 
     default:
