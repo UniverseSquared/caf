@@ -64,12 +64,15 @@ void move_editor_cursor(int x, int y) {
     if(new_x >= 0 && new_x < editor.term_width + 1)
         editor.cursor_x += x;
 
-    if(new_y >= 0 && new_y < editor.term_height)
+    if(new_y >= 0
+       && new_y < editor.term_height
+       && new_y <= editor.buffer.line_count - 1) {
         editor.cursor_y += y;
 
-    size_t cursor_x_limit = strlen(editor.buffer.lines[new_y]);
+        size_t cursor_x_limit = strlen(editor.buffer.lines[new_y]);
 
-    editor.cursor_x = MIN(editor.cursor_x, cursor_x_limit);
+        editor.cursor_x = MIN(editor.cursor_x, cursor_x_limit);
+    }
 
     printf("\x1b[%zu;%zuH", editor.cursor_y + 1, editor.cursor_x + 1);
     fflush(stdout);
