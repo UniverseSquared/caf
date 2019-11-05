@@ -28,15 +28,15 @@ void render_editor_state(void) {
     else
         printf("caf version %s", CAF_VERSION);
 
-    size_t cursor_display_y = editor.cursor_y - editor.buffer.scroll;
+    size_t cursor_display_y = editor.buffer.cursor_y - editor.buffer.scroll;
 
-    printf("\x1b[%zu;%zuH", cursor_display_y + 1, editor.cursor_x + 1);
+    printf("\x1b[%zu;%zuH", cursor_display_y + 1, editor.buffer.cursor_x + 1);
     fflush(stdout);
 }
 
 void editor_insert_char_at_cursor(char c) {
-    size_t x = editor.cursor_x;
-    size_t y = editor.cursor_y;
+    size_t x = editor.buffer.cursor_x;
+    size_t y = editor.buffer.cursor_y;
     size_t line_length = strlen(editor.buffer.lines[y]);
     editor.buffer.lines[y] = realloc(editor.buffer.lines[y], line_length + 2);
     memset(editor.buffer.lines[y] + line_length, 0, 2);
@@ -46,13 +46,13 @@ void editor_insert_char_at_cursor(char c) {
             line_length - x + 1);
 
     editor.buffer.lines[y][x] = c;
-    editor.cursor_x++;
+    editor.buffer.cursor_x++;
     render_editor_state();
 }
 
 void editor_insert_newline_at_cursor(void) {
-    size_t x = editor.cursor_x;
-    size_t y = editor.cursor_y;
+    size_t x = editor.buffer.cursor_x;
+    size_t y = editor.buffer.cursor_y;
     editor.buffer.lines = realloc(editor.buffer.lines,
                                   sizeof(char*) * editor.buffer.line_count + 1);
 
@@ -81,8 +81,8 @@ void editor_insert_newline_at_cursor(void) {
 }
 
 void editor_backspace_at_cursor(void) {
-    size_t x = editor.cursor_x;
-    size_t y = editor.cursor_y;
+    size_t x = editor.buffer.cursor_x;
+    size_t y = editor.buffer.cursor_y;
     size_t line_length = strlen(editor.buffer.lines[y]);
 
     if(x == 0 && y == 0)
@@ -93,7 +93,7 @@ void editor_backspace_at_cursor(void) {
                 editor.buffer.lines[y] + x,
                 line_length - x + 1);
 
-        editor.cursor_x--;
+        editor.buffer.cursor_x--;
     } else {
         size_t previous_line_length = strlen(editor.buffer.lines[y - 1]);
         size_t total_line_size = previous_line_length + line_length + 1;
@@ -109,9 +109,9 @@ void editor_backspace_at_cursor(void) {
         }
 
         editor.buffer.line_count--;
-        editor.cursor_x = total_line_size - 1;
+        editor.buffer.cursor_x = total_line_size - 1;
 
-        size_t relative_x = editor.cursor_x - total_line_size - 1;
+        size_t relative_x = editor.buffer.cursor_x - total_line_size - 1;
 
         move_editor_cursor(0, -1);
     }
@@ -137,18 +137,18 @@ void editor_save_buffer(void) {
 }
 
 void set_editor_cursor_position(size_t x, size_t y) {
-    editor.cursor_x = x;
-    editor.cursor_y = y;
+    editor.buffer.cursor_x = x;
+    editor.buffer.cursor_y = y;
 
     render_editor_state();
 }
 
 void move_editor_cursor(int x, int y) {
-    size_t new_x = editor.cursor_x + x;
-    size_t new_y = editor.cursor_y + y;
+    size_t new_x = editor.buffer.cursor_x + x;
+    size_t new_y = editor.buffer.cursor_y + y;
 
     if(new_x >= 0 && new_x < editor.term_width + 1)
-        editor.cursor_x += x;
+        editor.buffer.cursor_x += x;
 
     if(new_y >= 0
        && new_y <= editor.buffer.line_count - 1) {
@@ -158,11 +158,11 @@ void move_editor_cursor(int x, int y) {
             editor.buffer.scroll--;
         }
 
-        editor.cursor_y = new_y;
+        editor.buffer.cursor_y = new_y;
 
         size_t cursor_x_limit = strlen(editor.buffer.lines[new_y]);
 
-        editor.cursor_x = MIN(editor.cursor_x, cursor_x_limit);
+        editor.buffer.cursor_x = MIN(editor.buffer.cursor_x, cursor_x_limit);
     }
 
     render_editor_state();
@@ -236,12 +236,12 @@ void editor_handle_keypress() {
         break;
 
     case CTRL('e'): {
-        size_t cursor_x_limit = strlen(editor.buffer.lines[editor.cursor_y]);
-        set_editor_cursor_position(cursor_x_limit, editor.cursor_y);
+        size_t cursor_x_limit = strlen(editor.buffer.lines[editor.buffer.cursor_y]);
+        set_editor_cursor_position(cursor_x_limit, editor.buffer.cursor_y);
     } break;
 
     case CTRL('a'):
-        set_editor_cursor_position(0, editor.cursor_y);
+        set_editor_cursor_position(0, editor.buffer.cursor_y);
         break;
 
     case CTRL('s'):
@@ -311,8 +311,8 @@ void init_editor(void) {
     /* Register a callback for when the window size changes. */
     signal(SIGWINCH, editor_window_size_changed);
 
-    editor.cursor_x = 0;
-    editor.cursor_y = 0;
+    editor.buffer.cursor_x = 0;
+    editor.buffer.cursor_y = 0;
 
     editor.running = 1;
 }

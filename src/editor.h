@@ -18,13 +18,13 @@ enum editor_special_key {
 typedef struct editor_buffer {
     char **lines;
     size_t line_count;
+    size_t cursor_x, cursor_y;
     size_t scroll;
     FILE *file;
 } editor_buffer_t;
 
 typedef struct editor_state {
     struct termios original_termios;
-    size_t cursor_x, cursor_y;
     int term_width, term_height;
     int running;
     char *message;
