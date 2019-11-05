@@ -19,20 +19,18 @@ void render_editor_state(void) {
                                     editor.term_height - 1);
 
     for(size_t i = 0; i < line_display_count; i++)
-        printf("%s\r\n", editor.buffer.lines[i]);
+        printf("%s\r\n", editor.buffer.lines[i + editor.buffer.scroll]);
 
-    if(editor.buffer.line_count < editor.term_height) {
-        size_t remaining = editor.term_height - editor.buffer.line_count - 1;
-        for(size_t i = 0; i < remaining; i++)
-            printf("\r\n");
-    }
+    printf("\x1b[%zu;1H", editor.term_height);
 
     if(editor.message != NULL)
         printf("%s", editor.message);
     else
         printf("caf version %s", CAF_VERSION);
 
-    printf("\x1b[%zu;%zuH", editor.cursor_y + 1, editor.cursor_x + 1);
+    size_t cursor_display_y = editor.cursor_y - editor.buffer.scroll;
+
+    printf("\x1b[%zu;%zuH", cursor_display_y + 1, editor.cursor_x + 1);
     fflush(stdout);
 }
 
@@ -73,8 +71,9 @@ void editor_insert_newline_at_cursor(void) {
 
     memset(editor.buffer.lines[y] + x, 0, remaining_line_length);
 
-    editor.cursor_x = 0;
-    editor.cursor_y++;
+
+
+    move_editor_cursor(0, 1);
 
     editor.buffer.line_count++;
 
@@ -111,7 +110,10 @@ void editor_backspace_at_cursor(void) {
 
         editor.buffer.line_count--;
         editor.cursor_x = total_line_size - 1;
-        editor.cursor_y--;
+
+        size_t relative_x = editor.cursor_x - total_line_size - 1;
+
+        move_editor_cursor(0, -1);
     }
 
     render_editor_state();
@@ -138,8 +140,7 @@ void set_editor_cursor_position(size_t x, size_t y) {
     editor.cursor_x = x;
     editor.cursor_y = y;
 
-    printf("\x1b[%zu;%zuH", editor.cursor_y + 1, editor.cursor_x + 1);
-    fflush(stdout);
+    render_editor_state();
 }
 
 void move_editor_cursor(int x, int y) {
@@ -150,17 +151,21 @@ void move_editor_cursor(int x, int y) {
         editor.cursor_x += x;
 
     if(new_y >= 0
-       && new_y < editor.term_height - 1
        && new_y <= editor.buffer.line_count - 1) {
-        editor.cursor_y += y;
+        if(new_y >= editor.term_height + editor.buffer.scroll - 1) {
+            editor.buffer.scroll++;
+        } else if(new_y < editor.buffer.scroll) {
+            editor.buffer.scroll--;
+        }
+
+        editor.cursor_y = new_y;
 
         size_t cursor_x_limit = strlen(editor.buffer.lines[new_y]);
 
         editor.cursor_x = MIN(editor.cursor_x, cursor_x_limit);
     }
 
-    printf("\x1b[%zu;%zuH", editor.cursor_y + 1, editor.cursor_x + 1);
-    fflush(stdout);
+    render_editor_state();
 }
 
 int editor_read_key(void) {
@@ -274,6 +279,7 @@ void editor_load_from_file(FILE *file) {
     }
 
     editor.buffer.line_count = i;
+    editor.buffer.scroll = 0;
     editor.buffer.file = file;
 }
 

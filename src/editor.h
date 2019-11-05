@@ -18,6 +18,7 @@ enum editor_special_key {
 typedef struct editor_buffer {
     char **lines;
     size_t line_count;
+    size_t scroll;
     FILE *file;
 } editor_buffer_t;
 
