@@ -28,7 +28,8 @@ void render_editor_state(void) {
     if(editor.message != NULL)
         printf("%s", editor.message);
     else
-        printf("%s - %d,%d", editor.buffer.name,
+        printf("%s %c - %d,%d", editor.buffer.name,
+               editor.buffer.modified ? '*' : ' ',
                editor.buffer.cursor_y, editor.buffer.cursor_x);
 
     size_t cursor_display_y = editor.buffer.cursor_y - editor.buffer.scroll;
@@ -50,6 +51,8 @@ void editor_insert_char_at_cursor(char c) {
 
     editor.buffer.lines[y][x] = c;
     editor.buffer.cursor_x++;
+    editor.buffer.modified = 1;
+
     render_editor_state();
 }
 
@@ -74,11 +77,10 @@ void editor_insert_newline_at_cursor(void) {
 
     memset(editor.buffer.lines[y] + x, 0, remaining_line_length);
 
-
-
     move_editor_cursor(0, 1);
 
     editor.buffer.line_count++;
+    editor.buffer.modified = 1;
 
     render_editor_state();
 }
@@ -119,6 +121,8 @@ void editor_backspace_at_cursor(void) {
         move_editor_cursor(0, -1);
     }
 
+    editor.buffer.modified = 1;
+
     render_editor_state();
 }
 
@@ -148,6 +152,8 @@ void editor_delete_at_cursor(void) {
         editor.buffer.line_count--;
     }
 
+    editor.buffer.modified = 1;
+
     render_editor_state();
 }
 
@@ -164,6 +170,8 @@ void editor_save_buffer(void) {
         fwrite(line, 1, strlen(line), editor.buffer.file);
         fwrite("\n", 1, 1, editor.buffer.file);
     }
+
+    editor.buffer.modified = 0;
 
     editor_show_message("saved file");
 }
@@ -250,7 +258,7 @@ void editor_handle_keypress() {
 
     switch(key) {
     case CTRL('q'):
-        editor.running = 0;
+        editor_quit();
         break;
 
     case CTRL('p'):
@@ -332,11 +340,54 @@ void editor_load_from_file(char *file_path) {
     editor.buffer.scroll = 0;
     editor.buffer.file = file;
     editor.buffer.name = basename(file_path);
+    editor.buffer.modified = 0;
 }
 
 void editor_show_message(char *message) {
     editor.message = message;
     render_editor_state();
+}
+
+int editor_prompt_ync(const char *prompt) {
+    const char *prompt_suffix = " (y, n or c) ";
+    size_t total_buffer_size = strlen(prompt) + strlen(prompt_suffix) + 1;
+
+    char *buffer = malloc(total_buffer_size);
+    snprintf(buffer, total_buffer_size, "%s%s", prompt, prompt_suffix);
+
+    editor_show_message(buffer);
+
+    ssize_t read_count;
+    char c;
+    while(1) {
+        while((read_count = read(STDIN_FILENO, &c, 1)) == 0);
+
+        if(read_count == -1) {
+            perror("read");
+            exit(1);
+        }
+
+        if(c == 'n' || c == 'N')
+            return 0;
+        else if(c == 'y' || c == 'Y')
+            return 1;
+        else if(c == 'c' || c == 'C')
+            return 2;
+    }
+
+    editor_show_message(NULL);
+}
+
+void editor_quit(void) {
+    if(editor.buffer.modified) {
+        int response = editor_prompt_ync("Buffer is modified; save?");
+        if(response == RESPONSE_YES)
+            editor_save_buffer();
+        else if(response == RESPONSE_CANCEL)
+            return;
+    }
+
+    editor.running = 0;
 }
 
 void editor_window_size_changed(int signum) {
@@ -370,7 +421,6 @@ void init_editor(void) {
 
 void cleanup_editor(void) {
     if(editor.buffer.file != NULL) {
-        editor_save_buffer();
         fclose(editor.buffer.file);
     }
 }

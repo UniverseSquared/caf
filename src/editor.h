@@ -6,6 +6,10 @@
 
 #define CAF_VERSION "0.0.1"
 
+#define RESPONSE_NO     0
+#define RESPONSE_YES    1
+#define RESPONSE_CANCEL 2
+
 enum editor_special_key {
     KEY_RETURN = 13,
     KEY_BACKSPACE = 127,
@@ -25,6 +29,7 @@ typedef struct editor_buffer {
     size_t scroll;
     FILE *file;
     char *name;
+    int modified;
 } editor_buffer_t;
 
 typedef struct editor_state {
@@ -49,6 +54,8 @@ int editor_read_key(void);
 void editor_handle_keypress();
 void editor_load_from_file(char *file_path);
 void editor_show_message(char *message);
+int editor_prompt_ync(const char *prompt);
+void editor_quit(void);
 void editor_window_size_changed(int signum);
 void init_editor(void);
 void cleanup_editor(void);
