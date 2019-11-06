@@ -357,6 +357,9 @@ int editor_prompt_ync(const char *prompt) {
 
     editor_show_message(buffer);
 
+    printf("\x1b[%d;%dH", editor.term_height, total_buffer_size);
+    fflush(stdout);
+
     ssize_t read_count;
     char c;
     while(1) {
