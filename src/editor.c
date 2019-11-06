@@ -161,6 +161,11 @@ void editor_save_buffer(void) {
     if(editor.buffer.file == NULL)
         return;
 
+    if(!editor.buffer.modified) {
+        editor_show_message("No changes to be saved");
+        return;
+    }
+
     ftruncate(fileno(editor.buffer.file), 0);
     fseek(editor.buffer.file, 0, SEEK_SET);
 
@@ -173,7 +178,7 @@ void editor_save_buffer(void) {
 
     editor.buffer.modified = 0;
 
-    editor_show_message("saved file");
+    editor_show_message("Saved buffer");
 }
 
 void set_editor_cursor_position(size_t x, size_t y) {
