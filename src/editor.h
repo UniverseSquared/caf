@@ -12,7 +12,8 @@ enum editor_special_key {
     KEY_ARROW_UP = 1000,
     KEY_ARROW_DOWN,
     KEY_ARROW_LEFT,
-    KEY_ARROW_RIGHT
+    KEY_ARROW_RIGHT,
+    KEY_DELETE
 };
 
 typedef struct editor_buffer {
@@ -37,6 +38,7 @@ void render_editor_state(void);
 void editor_insert_char_at_cursor(char c);
 void editor_insert_newline_at_cursor(void);
 void editor_backspace_at_cursor(void);
+void editor_delete_at_cursor(void);
 void editor_save_buffer(void);
 void set_editor_cursor_position(size_t x, size_t y);
 void move_editor_cursor(int x, int y);

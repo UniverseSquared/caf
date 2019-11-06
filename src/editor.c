@@ -119,6 +119,35 @@ void editor_backspace_at_cursor(void) {
     render_editor_state();
 }
 
+void editor_delete_at_cursor(void) {
+    size_t x = editor.buffer.cursor_x;
+    size_t y = editor.buffer.cursor_y;
+    size_t line_length = strlen(editor.buffer.lines[y]);
+
+    if(x == 0 && y == 0)
+        return;
+
+    if(x < line_length) {
+        memmove(editor.buffer.lines[y] + x,
+                editor.buffer.lines[y] + x + 1,
+                line_length - x + 1);
+    } else if(x < editor.buffer.line_count) {
+        size_t next_line_length = strlen(editor.buffer.lines[y + 1]);
+
+        memmove(editor.buffer.lines[y] + line_length,
+                editor.buffer.lines[y + 1],
+                next_line_length);
+
+        for(size_t i = y + 1; i < editor.buffer.line_count - 1; i++) {
+            editor.buffer.lines[i] = editor.buffer.lines[i + 1];
+        }
+
+        editor.buffer.line_count--;
+    }
+
+    render_editor_state();
+}
+
 void editor_save_buffer(void) {
     if(editor.buffer.file == NULL)
         return;
@@ -176,8 +205,8 @@ int editor_read_key(void) {
     }
 
     if(c == 0x1b) {
-        char buffer[2];
-        if(read(STDIN_FILENO, buffer, 2) == -1) {
+        char buffer[3];
+        if(read(STDIN_FILENO, buffer, 3) == -1) {
             perror("read");
             exit(1);
         }
@@ -191,9 +220,11 @@ int editor_read_key(void) {
                 return KEY_ARROW_RIGHT;
             else if(buffer[1] == 'D')
                 return KEY_ARROW_LEFT;
-        } else {
-            return 0;
+            else if(buffer[1] == '3' && buffer[2] == '~')
+                return KEY_DELETE;
         }
+
+        return 0;
     }
 
     return c;
@@ -250,6 +281,10 @@ void editor_handle_keypress() {
 
     case KEY_BACKSPACE:
         editor_backspace_at_cursor();
+        break;
+
+    case KEY_DELETE:
+        editor_delete_at_cursor();
         break;
 
     case KEY_RETURN:
