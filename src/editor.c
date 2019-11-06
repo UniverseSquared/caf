@@ -1,6 +1,8 @@
 #include "editor.h"
 #include "terminal.h"
 #include <ctype.h>
+#include <errno.h>
+#include <libgen.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -26,7 +28,8 @@ void render_editor_state(void) {
     if(editor.message != NULL)
         printf("%s", editor.message);
     else
-        printf("caf version %s", CAF_VERSION);
+        printf("%s - %d,%d", editor.buffer.name,
+               editor.buffer.cursor_y, editor.buffer.cursor_x);
 
     size_t cursor_display_y = editor.buffer.cursor_y - editor.buffer.scroll;
 
@@ -296,7 +299,13 @@ void editor_handle_keypress() {
     }
 }
 
-void editor_load_from_file(FILE *file) {
+void editor_load_from_file(char *file_path) {
+    FILE *file = fopen(file_path, "r+");
+    if(!file) {
+        printf("Couldn't open file: %s\n", strerror(errno));
+        exit(1);
+    }
+
     char *line = NULL;
     size_t size, i = 0;
     ssize_t length;
@@ -316,6 +325,7 @@ void editor_load_from_file(FILE *file) {
     editor.buffer.line_count = i;
     editor.buffer.scroll = 0;
     editor.buffer.file = file;
+    editor.buffer.name = basename(file_path);
 }
 
 void editor_show_message(char *message) {

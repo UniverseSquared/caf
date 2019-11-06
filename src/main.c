@@ -14,14 +14,7 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    FILE *file = fopen(argv[1], "r+");
-
-    if(!file) {
-        printf("Couldn't open file: %s\n", strerror(errno));
-        return 1;
-    }
-
-    editor_load_from_file(file);
+    editor_load_from_file(argv[1]);
 
     init_editor();
 
