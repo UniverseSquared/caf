@@ -13,7 +13,9 @@ enum editor_special_key {
     KEY_ARROW_DOWN,
     KEY_ARROW_LEFT,
     KEY_ARROW_RIGHT,
-    KEY_DELETE
+    KEY_DELETE,
+    KEY_HOME,
+    KEY_END
 };
 
 typedef struct editor_buffer {

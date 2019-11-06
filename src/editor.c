@@ -225,6 +225,10 @@ int editor_read_key(void) {
                 return KEY_ARROW_LEFT;
             else if(buffer[1] == '3' && buffer[2] == '~')
                 return KEY_DELETE;
+            else if(buffer[1] == 'H')
+                return KEY_HOME;
+            else if(buffer[1] == 'F')
+                return KEY_END;
         }
 
         return 0;
@@ -269,11 +273,13 @@ void editor_handle_keypress() {
         move_editor_cursor(1, 0);
         break;
 
+    case KEY_END:
     case CTRL('e'): {
         size_t cursor_x_limit = strlen(editor.buffer.lines[editor.buffer.cursor_y]);
         set_editor_cursor_position(cursor_x_limit, editor.buffer.cursor_y);
     } break;
 
+    case KEY_HOME:
     case CTRL('a'):
         set_editor_cursor_position(0, editor.buffer.cursor_y);
         break;
