@@ -124,7 +124,7 @@ void editor_delete_at_cursor(void) {
     size_t y = editor.buffer.cursor_y;
     size_t line_length = strlen(editor.buffer.lines[y]);
 
-    if(x == 0 && y == 0)
+    if(x == line_length && y == editor.buffer.line_count - 1)
         return;
 
     if(x < line_length) {
