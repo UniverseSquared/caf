@@ -5,7 +5,7 @@
 #include <termios.h>
 #include <unistd.h>
 
-void restore_original_configuration(void) {
+void restore_terminal_configuration(void) {
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &editor.original_termios);
 
     printf("\x1b[2J\x1b[1;1H");
@@ -18,7 +18,7 @@ void configure_terminal(void) {
         exit(1);
     }
 
-    atexit(restore_original_configuration);
+    atexit(restore_terminal_configuration);
 
     struct termios termios = editor.original_termios;
 

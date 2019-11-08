@@ -266,6 +266,10 @@ void editor_handle_keypress() {
         editor_quit();
         break;
 
+    case CTRL('z'):
+        editor_suspend();
+        break;
+
     case CTRL('p'):
     case KEY_ARROW_UP:
         move_editor_cursor(0, -1);
@@ -368,7 +372,7 @@ int editor_prompt_ync(const char *prompt) {
     ssize_t read_count;
     char c;
     while(1) {
-        while((read_count = read(STDIN_FILENO, &c, 1)) == 0);
+        c = editor_read_key();
 
         if(read_count == -1) {
             perror("read");
@@ -408,6 +412,23 @@ void editor_window_size_changed(int signum) {
     render_editor_state();
 }
 
+void editor_suspend(void) {
+    /* Restore the original terminal configuration and clear the screen. */
+    restore_terminal_configuration();
+    printf("\x1b[2J");
+    fflush(stdout);
+
+    /* To suspend the editor, we can just SIGSTOP ourselves. */
+    kill(0, SIGSTOP);
+}
+
+void editor_continue(void) {
+    /* After returning from suspension, we restore our terminal configuration
+     * and re-render the editor state. */
+    configure_terminal();
+    render_editor_state();
+}
+
 void init_editor(void) {
     configure_terminal();
 
@@ -420,6 +441,10 @@ void init_editor(void) {
 
     /* Register a callback for when the window size changes. */
     signal(SIGWINCH, editor_window_size_changed);
+
+    /* Handle suspension (with C-z or SIGTSTP) properly. */
+    signal(SIGTSTP, editor_suspend);
+    signal(SIGCONT, editor_continue);
 
     editor.buffer.cursor_x = 0;
     editor.buffer.cursor_y = 0;

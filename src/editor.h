@@ -57,6 +57,8 @@ void editor_show_message(char *message);
 int editor_prompt_ync(const char *prompt);
 void editor_quit(void);
 void editor_window_size_changed(int signum);
+void editor_suspend(void);
+void editor_continue(void);
 void init_editor(void);
 void cleanup_editor(void);
 
