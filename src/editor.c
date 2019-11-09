@@ -77,7 +77,7 @@ void editor_insert_newline_at_cursor(void) {
 
     memset(editor.buffer.lines[y] + x, 0, remaining_line_length);
 
-    move_editor_cursor(0, 1);
+    move_editor_cursor(0, 1, 1);
 
     editor.buffer.line_count++;
     editor.buffer.modified = 1;
@@ -118,7 +118,7 @@ void editor_backspace_at_cursor(void) {
 
         size_t relative_x = editor.buffer.cursor_x - total_line_size - 1;
 
-        move_editor_cursor(0, -1);
+        move_editor_cursor(0, -1, 1);
     }
 
     editor.buffer.modified = 1;
@@ -188,7 +188,7 @@ void set_editor_cursor_position(size_t x, size_t y) {
     render_editor_state();
 }
 
-void move_editor_cursor(int x, int y) {
+void move_editor_cursor(int x, int y, int render) {
     size_t new_x = editor.buffer.cursor_x + x;
     size_t new_y = editor.buffer.cursor_y + y;
 
@@ -210,10 +210,37 @@ void move_editor_cursor(int x, int y) {
         editor.buffer.cursor_x = MIN(editor.buffer.cursor_x, cursor_x_limit);
     }
 
+    if(render)
+        render_editor_state();
+}
+
+void editor_move_backward_paragraph(void) {
+    if(editor.buffer.cursor_y == 0)
+        return;
+
+    size_t y = editor.buffer.cursor_y - 1;
+    while(y > 0 && strlen(editor.buffer.lines[y]) != 0) {
+        move_editor_cursor(0, -1, 0);
+        y = editor.buffer.cursor_y;
+    }
+
     render_editor_state();
 }
 
-int editor_read_key(void) {
+void editor_move_forward_paragraph(void) {
+    if(editor.buffer.cursor_y == editor.buffer.line_count - 1)
+        return;
+
+    size_t y = editor.buffer.cursor_y + 1;
+    while(y != editor.buffer.line_count - 1 && strlen(editor.buffer.lines[y]) != 0) {
+        move_editor_cursor(0, 1, 0);
+        y = editor.buffer.cursor_y;
+    }
+
+    render_editor_state();
+}
+
+int editor_read_key(size_t *modifiers_out) {
     char c = 0;
     if(read(STDIN_FILENO, &c, 1) == -1) {
         perror("read");
@@ -221,26 +248,40 @@ int editor_read_key(void) {
     }
 
     if(c == 0x1b) {
-        char buffer[3];
-        if(read(STDIN_FILENO, buffer, 3) == -1) {
+        size_t modifiers = 0;
+        char buffer[5];
+        if(read(STDIN_FILENO, buffer, 5) == -1) {
             perror("read");
             exit(1);
         }
 
         if(buffer[0] == '[') {
-            if(buffer[1] == 'A')
+            size_t i = 1;
+            if(buffer[1] == '1' && buffer[2] == ';') {
+                if(buffer[3] == '2')
+                    modifiers |= MODIFIER_SHIFT;
+                else if(buffer[3] == '5')
+                    modifiers |= MODIFIER_CTRL;
+
+                i += 3;
+            }
+
+            if(modifiers_out != NULL)
+                *modifiers_out = modifiers;
+
+            if(buffer[i] == 'A')
                 return KEY_ARROW_UP;
-            else if(buffer[1] == 'B')
+            else if(buffer[i] == 'B')
                 return KEY_ARROW_DOWN;
-            else if(buffer[1] == 'C')
+            else if(buffer[i] == 'C')
                 return KEY_ARROW_RIGHT;
-            else if(buffer[1] == 'D')
+            else if(buffer[i] == 'D')
                 return KEY_ARROW_LEFT;
-            else if(buffer[1] == '3' && buffer[2] == '~')
+            else if(buffer[i] == '3' && buffer[2] == '~')
                 return KEY_DELETE;
-            else if(buffer[1] == 'H')
+            else if(buffer[i] == 'H')
                 return KEY_HOME;
-            else if(buffer[1] == 'F')
+            else if(buffer[i] == 'F')
                 return KEY_END;
         }
 
@@ -251,7 +292,8 @@ int editor_read_key(void) {
 }
 
 void editor_handle_keypress() {
-    int key = editor_read_key();
+    size_t modifiers;
+    int key = editor_read_key(&modifiers);
 
     if(key == 0)
         return;
@@ -272,22 +314,28 @@ void editor_handle_keypress() {
 
     case CTRL('p'):
     case KEY_ARROW_UP:
-        move_editor_cursor(0, -1);
+        if(modifiers & MODIFIER_CTRL)
+            editor_move_backward_paragraph();
+        else
+            move_editor_cursor(0, -1, 1);
         break;
 
     case CTRL('n'):
     case KEY_ARROW_DOWN:
-        move_editor_cursor(0, 1);
+        if(modifiers & MODIFIER_CTRL)
+            editor_move_forward_paragraph();
+        else
+            move_editor_cursor(0, 1, 1);
         break;
 
     case CTRL('b'):
     case KEY_ARROW_LEFT:
-        move_editor_cursor(-1, 0);
+        move_editor_cursor(-1, 0, 1);
         break;
 
     case CTRL('f'):
     case KEY_ARROW_RIGHT:
-        move_editor_cursor(1, 0);
+        move_editor_cursor(1, 0, 1);
         break;
 
     case KEY_END:
@@ -372,7 +420,7 @@ int editor_prompt_ync(const char *prompt) {
     ssize_t read_count;
     char c;
     while(1) {
-        c = editor_read_key();
+        c = editor_read_key(NULL);
 
         if(read_count == -1) {
             perror("read");
