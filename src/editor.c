@@ -20,8 +20,22 @@ void render_editor_state(void) {
     size_t line_display_count = MIN(editor.buffer.line_count,
                                     editor.term_height - 1);
 
-    for(size_t i = 0; i < line_display_count; i++)
-        printf("%s\r\n", editor.buffer.lines[i + editor.buffer.scroll]);
+    for(size_t i = 0; i < line_display_count; i++) {
+        if(strlen(editor.buffer.lines[i + editor.buffer.vscroll]) < editor.buffer.hscroll) {
+            printf("\r\n");
+            continue;
+        }
+
+        char *line = editor.buffer.lines[i + editor.buffer.vscroll] + editor.buffer.hscroll;
+        size_t line_length = strlen(line);
+
+        if(line_length < editor.term_width)
+            printf("%s\r\n", line);
+        else if(line_length > editor.term_width)
+            printf("%.*s>\r\n", editor.term_width - 1, line);
+        else
+            printf("\r\n");
+    }
 
     printf("\x1b[%zu;1H", editor.term_height);
 
@@ -32,9 +46,10 @@ void render_editor_state(void) {
                editor.buffer.modified ? '*' : ' ',
                editor.buffer.cursor_y, editor.buffer.cursor_x);
 
-    size_t cursor_display_y = editor.buffer.cursor_y - editor.buffer.scroll;
+    size_t cursor_display_x = editor.buffer.cursor_x - editor.buffer.hscroll;
+    size_t cursor_display_y = editor.buffer.cursor_y - editor.buffer.vscroll;
 
-    printf("\x1b[%zu;%zuH", cursor_display_y + 1, editor.buffer.cursor_x + 1);
+    printf("\x1b[%zu;%zuH", cursor_display_y + 1, cursor_display_x + 1);
     fflush(stdout);
 }
 
@@ -77,7 +92,7 @@ void editor_insert_newline_at_cursor(void) {
 
     memset(editor.buffer.lines[y] + x, 0, remaining_line_length);
 
-    move_editor_cursor(0, 1, 1);
+    move_editor_cursor(0, 1, 1, 1);
 
     editor.buffer.line_count++;
     editor.buffer.modified = 1;
@@ -118,7 +133,7 @@ void editor_backspace_at_cursor(void) {
 
         size_t relative_x = editor.buffer.cursor_x - total_line_size - 1;
 
-        move_editor_cursor(0, -1, 1);
+        move_editor_cursor(0, -1, 1, 1);
     }
 
     editor.buffer.modified = 1;
@@ -181,26 +196,25 @@ void editor_save_buffer(void) {
     editor_show_message("Saved buffer");
 }
 
-void set_editor_cursor_position(size_t x, size_t y) {
-    editor.buffer.cursor_x = x;
-    editor.buffer.cursor_y = y;
+void move_editor_cursor(int x, int y, int render, int relative) {
+    size_t new_x = x;
+    size_t new_y = y;
 
-    render_editor_state();
-}
+    if(relative) {
+        new_x += editor.buffer.cursor_x;
+        new_y += editor.buffer.cursor_y;
+    }
 
-void move_editor_cursor(int x, int y, int render) {
-    size_t new_x = editor.buffer.cursor_x + x;
-    size_t new_y = editor.buffer.cursor_y + y;
-
-    if(new_x >= 0 && new_x < editor.term_width + 1)
-        editor.buffer.cursor_x += x;
+    if(new_x >= 0) {
+        editor.buffer.cursor_x = new_x;
+    }
 
     if(new_y >= 0
        && new_y <= editor.buffer.line_count - 1) {
-        if(new_y >= editor.term_height + editor.buffer.scroll - 1) {
-            editor.buffer.scroll++;
-        } else if(new_y < editor.buffer.scroll) {
-            editor.buffer.scroll--;
+        if(new_y >= editor.term_height + editor.buffer.vscroll - 1) {
+            editor.buffer.vscroll++;
+        } else if(new_y < editor.buffer.vscroll) {
+            editor.buffer.vscroll--;
         }
 
         editor.buffer.cursor_y = new_y;
@@ -208,6 +222,12 @@ void move_editor_cursor(int x, int y, int render) {
         size_t cursor_x_limit = strlen(editor.buffer.lines[new_y]);
 
         editor.buffer.cursor_x = MIN(editor.buffer.cursor_x, cursor_x_limit);
+    }
+
+    if(editor.buffer.cursor_x >= editor.term_width + editor.buffer.hscroll - 1) {
+        editor.buffer.hscroll += editor.term_width - 1;
+    } else if(editor.buffer.cursor_x < editor.buffer.hscroll) {
+        editor.buffer.hscroll -= editor.term_width - 1;
     }
 
     if(render)
@@ -220,7 +240,7 @@ void editor_move_backward_paragraph(void) {
 
     size_t y = editor.buffer.cursor_y - 1;
     while(y > 0 && strlen(editor.buffer.lines[y]) != 0) {
-        move_editor_cursor(0, -1, 0);
+        move_editor_cursor(0, -1, 0, 1);
         y = editor.buffer.cursor_y;
     }
 
@@ -233,7 +253,7 @@ void editor_move_forward_paragraph(void) {
 
     size_t y = editor.buffer.cursor_y + 1;
     while(y != editor.buffer.line_count - 1 && strlen(editor.buffer.lines[y]) != 0) {
-        move_editor_cursor(0, 1, 0);
+        move_editor_cursor(0, 1, 0, 1);
         y = editor.buffer.cursor_y;
     }
 
@@ -317,7 +337,7 @@ void editor_handle_keypress() {
         if(modifiers & MODIFIER_CTRL)
             editor_move_backward_paragraph();
         else
-            move_editor_cursor(0, -1, 1);
+            move_editor_cursor(0, -1, 1, 1);
         break;
 
     case CTRL('n'):
@@ -325,28 +345,28 @@ void editor_handle_keypress() {
         if(modifiers & MODIFIER_CTRL)
             editor_move_forward_paragraph();
         else
-            move_editor_cursor(0, 1, 1);
+            move_editor_cursor(0, 1, 1, 1);
         break;
 
     case CTRL('b'):
     case KEY_ARROW_LEFT:
-        move_editor_cursor(-1, 0, 1);
+        move_editor_cursor(-1, 0, 1, 1);
         break;
 
     case CTRL('f'):
     case KEY_ARROW_RIGHT:
-        move_editor_cursor(1, 0, 1);
+        move_editor_cursor(1, 0, 1, 1);
         break;
 
     case KEY_END:
     case CTRL('e'): {
         size_t cursor_x_limit = strlen(editor.buffer.lines[editor.buffer.cursor_y]);
-        set_editor_cursor_position(cursor_x_limit, editor.buffer.cursor_y);
+        move_editor_cursor(cursor_x_limit, editor.buffer.cursor_y, 1, 0);
     } break;
 
     case KEY_HOME:
     case CTRL('a'):
-        set_editor_cursor_position(0, editor.buffer.cursor_y);
+        move_editor_cursor(0, editor.buffer.cursor_y, 1, 0);
         break;
 
     case CTRL('s'):
@@ -394,7 +414,8 @@ void editor_load_from_file(char *file_path) {
     }
 
     editor.buffer.line_count = i;
-    editor.buffer.scroll = 0;
+    editor.buffer.hscroll = 0;
+    editor.buffer.vscroll = 0;
     editor.buffer.file = file;
     editor.buffer.name = basename(file_path);
     editor.buffer.modified = 0;

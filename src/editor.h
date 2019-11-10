@@ -33,7 +33,7 @@ typedef struct editor_buffer {
     char **lines;
     size_t line_count;
     size_t cursor_x, cursor_y;
-    size_t scroll;
+    size_t hscroll, vscroll;
     FILE *file;
     char *name;
     int modified;
@@ -55,8 +55,7 @@ void editor_insert_newline_at_cursor(void);
 void editor_backspace_at_cursor(void);
 void editor_delete_at_cursor(void);
 void editor_save_buffer(void);
-void set_editor_cursor_position(size_t x, size_t y);
-void move_editor_cursor(int x, int y, int render);
+void move_editor_cursor(int x, int y, int render, int relative);
 void editor_move_backward_paragraph(void);
 void editor_move_forward_paragraph(void);
 int editor_read_key(size_t *modifiers_out);
